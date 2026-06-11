@@ -1,0 +1,120 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
+
+/* Dossier Location Facile - Minimalist Design System */
+
+:root {
+  /* Colors - Clean, Organic Forest Green Theme (Light Mode Only) */
+  --bg-primary: #fcfdfa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f4f5f2;
+  
+  --foreground: #1c2217;
+  --text-primary: #1c2217;
+  --text-secondary: #4a5443;
+  --text-muted: #889282;
+  
+  --primary: #283618;
+  --primary-hover: #1b2510;
+  --primary-light: #f1f3ee;
+  
+  --accent: #606c38;
+  --accent-light: #fefae0;
+  
+  --border-color: #e1e3de;
+  --border-hover: #cbd0c7;
+  --border-focus: #283618;
+  
+  --success: #2a7e5c;
+  --success-light: #e6f4ee;
+  --error: #bc3939;
+  --error-light: #fbebeb;
+  --warning: #b37400;
+  --warning-light: #fef7e6;
+  
+  /* Layout - Sharp & Professional Flat Design */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  
+  /* Subtle, Flat Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(40, 54, 24, 0.05);
+  --shadow-md: 0 4px 12px 0 rgba(40, 54, 24, 0.03);
+  --shadow-lg: 0 8px 24px 0 rgba(40, 54, 24, 0.04);
+  
+  --transition-fast: 0.1s ease;
+  --transition-normal: 0.2s ease;
+}
+
+/* Reset and Global Styles */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Simple animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--transition-normal) forwards;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
