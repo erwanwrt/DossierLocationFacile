@@ -6,7 +6,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import SubmissionStatusActions from "@/components/SubmissionStatusActions";
 import styles from "@/styles/components.module.css";
-import { ArrowLeft, Calendar, FileText, Mail, Phone, Wallet, Users, FolderOpen } from "lucide-react";
+import { ArrowLeft, Calendar, FileText, Mail, Phone, Wallet, Users, FolderOpen, MessageSquare } from "lucide-react";
 
 const DOC_NAMES: Record<string, string> = {
   tenant_cni: "Pièce d'identité (CNI)",
@@ -248,6 +248,43 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
                       </div>
                     </div>
                   </div>
+
+                  {/* Tenant Comment if present */}
+                  {submission.tenant_comment && (
+                    <div style={{ 
+                      marginTop: "1.5rem", 
+                      paddingTop: "1.25rem", 
+                      borderTop: "1px dashed var(--border-color)" 
+                    }}>
+                      <h3 style={{ 
+                        fontSize: "0.9rem", 
+                        textTransform: "uppercase", 
+                        color: "var(--text-muted)", 
+                        fontWeight: 600, 
+                        marginBottom: "0.5rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.4rem"
+                      }}>
+                        <MessageSquare size={16} style={{ color: "var(--primary)" }} />
+                        Commentaire / Remarques du candidat
+                      </h3>
+                      <p style={{ 
+                        fontSize: "0.95rem", 
+                        color: "var(--text-secondary)", 
+                        lineHeight: "1.5",
+                        whiteSpace: "pre-wrap",
+                        backgroundColor: "var(--bg-primary)",
+                        padding: "0.75rem 1rem",
+                        borderRadius: "var(--radius-md)",
+                        border: "1px solid var(--border-color)",
+                        marginTop: "0.5rem",
+                        margin: 0
+                      }}>
+                        {submission.tenant_comment}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}

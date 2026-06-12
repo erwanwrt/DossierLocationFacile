@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     const tenantSituation = formData.get("tenant_situation") as string;
     const tenantIncomeRaw = formData.get("tenant_income") as string;
     const guarantorType = formData.get("guarantor_type") as string;
+    const tenantComment = formData.get("tenant_comment") as string || null;
 
     if (
       !propertyId ||
@@ -149,6 +150,7 @@ export async function POST(req: NextRequest) {
         gdrive_folder_id: tenantFolderId,
         files: filesLinks,
         status: "pending",
+        tenant_comment: tenantComment,
       })
       .select()
       .single();

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import styles from "@/styles/components.module.css";
-import { User, Briefcase, ShieldAlert, FileUp, CheckCircle, Mail, Phone, UserCheck, AlertTriangle } from "lucide-react";
+import { User, Briefcase, ShieldAlert, FileUp, CheckCircle, Mail, Phone, UserCheck, AlertTriangle, MessageSquare } from "lucide-react";
 
 interface TenantApplicationFormProps {
   propertyId: string;
@@ -22,6 +22,7 @@ export default function TenantApplicationForm({
   const [phone, setPhone] = useState("");
   const [situation, setSituation] = useState<"employee" | "student" | "other">("employee");
   const [income, setIncome] = useState("");
+  const [comment, setComment] = useState("");
 
   // Guarantor Options
   const [hasGuarantor, setHasGuarantor] = useState(requireGuarantor === "required");
@@ -55,34 +56,7 @@ export default function TenantApplicationForm({
     setLoading(true);
     setError("");
 
-    // Validate files based on situation and guarantor
-    const missingDocs: string[] = [];
-    if (!files.tenant_cni) missingDocs.push("Pièce d'identité du locataire");
-    if (situation === "employee" && !files.tenant_payslips) missingDocs.push("3 dernières fiches de paie");
-    if (situation === "student" && !files.tenant_school_cert) missingDocs.push("Certificat de scolarité");
-    if (!files.tenant_tax_notice) missingDocs.push("Dernier avis d'imposition du locataire");
-    if (!files.tenant_rent_receipts) missingDocs.push("3 dernières quittances de loyer (ou attestation d'hébergement)");
-
     const isGuarantorActive = requireGuarantor === "required" || (requireGuarantor === "optional" && hasGuarantor);
-
-    if (isGuarantorActive) {
-      if (guarantorType === "visale") {
-        if (!files.guarantor_visale) missingDocs.push("Attestation de garantie Visale");
-      } else {
-        if (!files.guarantor_cni) missingDocs.push("Pièce d'identité du garant");
-        if (!files.guarantor_payslips) missingDocs.push("3 dernières fiches de paie du garant");
-        if (!files.guarantor_tax_notice) missingDocs.push("Dernier avis d'imposition du garant");
-        if (!files.guarantor_address_proof) missingDocs.push("Justificatif de domicile du garant");
-        if (!files.guarantor_letter) missingDocs.push("Lettre de caution solidaire du garant");
-      }
-    }
-
-    if (missingDocs.length > 0) {
-      setError(`Veuillez ajouter les documents obligatoires suivants : ${missingDocs.join(", ")}.`);
-      setLoading(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
 
     // Build Form Data
     const formData = new FormData();
@@ -94,17 +68,24 @@ export default function TenantApplicationForm({
     formData.append("tenant_situation", situation);
     formData.append("tenant_income", income);
     formData.append("guarantor_type", isGuarantorActive ? guarantorType : "none");
+    formData.append("tenant_comment", comment);
 
-    // Append Files
-    formData.append("tenant_cni", files.tenant_cni!);
+    // Append Files (if provided)
+    if (files.tenant_cni) {
+      formData.append("tenant_cni", files.tenant_cni);
+    }
     if (situation === "employee" && files.tenant_payslips) {
       formData.append("tenant_payslips", files.tenant_payslips);
     }
     if (situation === "student" && files.tenant_school_cert) {
       formData.append("tenant_school_cert", files.tenant_school_cert);
     }
-    formData.append("tenant_tax_notice", files.tenant_tax_notice!);
-    formData.append("tenant_rent_receipts", files.tenant_rent_receipts!);
+    if (files.tenant_tax_notice) {
+      formData.append("tenant_tax_notice", files.tenant_tax_notice);
+    }
+    if (files.tenant_rent_receipts) {
+      formData.append("tenant_rent_receipts", files.tenant_rent_receipts);
+    }
 
     if (isGuarantorActive) {
       if (guarantorType === "visale" && files.guarantor_visale) {
@@ -315,7 +296,7 @@ export default function TenantApplicationForm({
           <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
             {/* CNI */}
             <div className={styles.formGroup}>
-              <label className={styles.label}>Pièce d'identité (CNI / Passeport / Titre de séjour) *</label>
+              <label className={styles.label}>Pièce d'identité (CNI / Passeport / Titre de séjour)</label>
               <FileInput
                 id="tenant_cni"
                 file={files.tenant_cni}
@@ -327,7 +308,7 @@ export default function TenantApplicationForm({
             {/* Payslips - Salary only */}
             {situation === "employee" && (
               <div className={styles.formGroup}>
-                <label className={styles.label}>3 dernières fiches de paie (en 1 seul fichier) *</label>
+                <label className={styles.label}>3 dernières fiches de paie (en 1 seul fichier)</label>
                 <FileInput
                   id="tenant_payslips"
                   file={files.tenant_payslips}
@@ -340,7 +321,7 @@ export default function TenantApplicationForm({
             {/* Student Cert - Student only */}
             {situation === "student" && (
               <div className={styles.formGroup}>
-                <label className={styles.label}>Certificat de scolarité ou Carte d'étudiant *</label>
+                <label className={styles.label}>Certificat de scolarité ou Carte d'étudiant</label>
                 <FileInput
                   id="tenant_school_cert"
                   file={files.tenant_school_cert}
@@ -352,7 +333,7 @@ export default function TenantApplicationForm({
 
             {/* Tax Notice */}
             <div className={styles.formGroup}>
-              <label className={styles.label}>Dernier avis d'imposition *</label>
+              <label className={styles.label}>Dernier avis d'imposition</label>
               <FileInput
                 id="tenant_tax_notice"
                 file={files.tenant_tax_notice}
@@ -363,7 +344,7 @@ export default function TenantApplicationForm({
 
             {/* Rent Receipts */}
             <div className={styles.formGroup}>
-              <label className={styles.label}>3 dernières quittances de loyer (ou attestation d'hébergement) *</label>
+              <label className={styles.label}>3 dernières quittances de loyer (ou attestation d'hébergement)</label>
               <FileInput
                 id="tenant_rent_receipts"
                 file={files.tenant_rent_receipts}
@@ -430,7 +411,7 @@ export default function TenantApplicationForm({
 
                 {guarantorType === "visale" ? (
                   <div className={`${styles.formGroup} animate-fade-in`}>
-                    <label className={styles.label}>Visa de garantie Visale en cours de validité *</label>
+                    <label className={styles.label}>Visa de garantie Visale en cours de validité</label>
                     <FileInput
                       id="guarantor_visale"
                       file={files.guarantor_visale}
@@ -441,7 +422,7 @@ export default function TenantApplicationForm({
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }} className="animate-fade-in">
                     <div className={styles.formGroup}>
-                      <label className={styles.label}>Pièce d'identité du garant (CNI / Passeport) *</label>
+                      <label className={styles.label}>Pièce d'identité du garant (CNI / Passeport)</label>
                       <FileInput
                         id="guarantor_cni"
                         file={files.guarantor_cni}
@@ -450,7 +431,7 @@ export default function TenantApplicationForm({
                       />
                     </div>
                     <div className={styles.formGroup}>
-                      <label className={styles.label}>3 dernières fiches de paie du garant (en 1 seul fichier) *</label>
+                      <label className={styles.label}>3 dernières fiches de paie du garant (en 1 seul fichier)</label>
                       <FileInput
                         id="guarantor_payslips"
                         file={files.guarantor_payslips}
@@ -459,7 +440,7 @@ export default function TenantApplicationForm({
                       />
                     </div>
                     <div className={styles.formGroup}>
-                      <label className={styles.label}>Dernier avis d'imposition du garant *</label>
+                      <label className={styles.label}>Dernier avis d'imposition du garant</label>
                       <FileInput
                         id="guarantor_tax_notice"
                         file={files.guarantor_tax_notice}
@@ -468,7 +449,7 @@ export default function TenantApplicationForm({
                       />
                     </div>
                     <div className={styles.formGroup}>
-                      <label className={styles.label}>Justificatif de domicile du garant (facture EDF, etc.) *</label>
+                      <label className={styles.label}>Justificatif de domicile du garant (facture EDF, etc.)</label>
                       <FileInput
                         id="guarantor_address_proof"
                         file={files.guarantor_address_proof}
@@ -477,7 +458,7 @@ export default function TenantApplicationForm({
                       />
                     </div>
                     <div className={styles.formGroup}>
-                      <label className={styles.label}>Lettre d'engagement de caution solidaire signée *</label>
+                      <label className={styles.label}>Lettre d'engagement de caution solidaire signée</label>
                       <FileInput
                         id="guarantor_letter"
                         file={files.guarantor_letter}
@@ -491,6 +472,27 @@ export default function TenantApplicationForm({
             )}
           </fieldset>
         )}
+
+        {/* SECTION 5: Optional Comments */}
+        <fieldset style={{ border: "none", marginBottom: "2.5rem" }}>
+          <legend style={{ fontSize: "1.15rem", fontWeight: 700, marginBottom: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem", color: "var(--primary)" }}>
+            <MessageSquare size={20} />
+            5. Message ou remarques particulières (optionnel)
+          </legend>
+
+          <div className={styles.formGroup}>
+            <label className={styles.label} htmlFor="comment">Votre message ou précisions pour le propriétaire</label>
+            <textarea
+              id="comment"
+              className={styles.textarea}
+              style={{ minHeight: "120px", resize: "vertical", padding: "0.75rem 1rem" }}
+              placeholder="Ex: Précisions sur votre dossier, garant supplémentaire, date d'emménagement souhaitée..."
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+        </fieldset>
 
         <button
           type="submit"

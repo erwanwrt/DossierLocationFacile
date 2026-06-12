@@ -1,6 +1,6 @@
 import Link from "next/link";
 import styles from "@/styles/components.module.css";
-import { Building2, ShieldCheck, FolderUp, CheckSquare, ArrowRight } from "lucide-react";
+import { ShieldCheck, FolderUp, CheckSquare, ArrowRight } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -8,7 +8,7 @@ export default function HomePage() {
       {/* Header */}
       <header className={styles.navbar}>
         <div className={styles.logo}>
-          <Building2 size={22} strokeWidth={2.5} />
+          <img src="/logo.png" alt="Logo" width={30} height={30} />
           <span>Dossier Location Facile</span>
         </div>
         <Link 

@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     gdrive_folder_id TEXT,
     files JSONB NOT NULL DEFAULT '{}'::jsonb, -- Map of doc_type -> google drive webViewLink
     status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'accepted', 'rejected'
+    tenant_comment TEXT, -- Optional comment from the tenant
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 

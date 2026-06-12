@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import TenantApplicationForm from "@/components/TenantApplicationForm";
 import styles from "@/styles/components.module.css";
-import { Building2, XCircle } from "lucide-react";
+import { XCircle } from "lucide-react";
 
 interface TenantPageProps {
   params: Promise<{ slug: string }>;
@@ -58,7 +58,7 @@ export default async function TenantPage({ params }: TenantPageProps) {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <header className={styles.navbar}>
         <div className={styles.logo}>
-          <Building2 size={20} />
+          <img src="/logo.png" alt="Logo" width={30} height={30} />
           <span>Dossier Location Facile</span>
         </div>
       </header>
