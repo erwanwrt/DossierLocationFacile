@@ -59,7 +59,7 @@ export default function HomePage() {
               lineHeight: 1.6, 
               marginBottom: "2.5rem" 
             }}>
-              Créez vos biens immobiliers, générez des liens de candidature publics et recevez les dossiers locataires complets (avec garants) directement dans votre Google Drive personnel.
+              Créez vos biens immobiliers, générez des liens de candidature publics et recevez les dossiers locataires complets (avec garants).
             </p>
             <div style={{ display: "flex", justifyContent: "center", gap: "1rem" }}>
               <Link 
@@ -101,9 +101,9 @@ export default function HomePage() {
               }}>
                 <FolderUp size={24} />
               </div>
-              <h3 style={{ fontSize: "1.15rem", fontWeight: 700 }}>Stockage Google Drive</h3>
+              <h3 style={{ fontSize: "1.15rem", fontWeight: 700 }}>Stockage</h3>
               <p style={{ color: "var(--text-secondary)", fontSize: "0.9rem", lineHeight: 1.5 }}>
-                Toutes les pièces justificatives des locataires sont directement téléversées dans un dossier structuré (sous-dossier par propriété, puis sous-dossier par candidat) sur votre Google Drive.
+                Toutes les pièces justificatives des locataires sont directement téléversées dans un dossier structuré (sous-dossier par propriété, puis sous-dossier par candidat) sur Google Drive.
               </p>
             </div>
 
