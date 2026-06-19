@@ -25,19 +25,19 @@ export default function CopyButton({ text }: CopyButtonProps) {
     <button
       onClick={handleCopy}
       className={`${styles.btn} ${styles.btnSecondary}`}
-      style={{ padding: "0.5rem", borderRadius: "var(--radius-sm)", display: "flex", gap: "0.25rem", alignItems: "center" }}
+      style={{
+        padding: "0.5rem",
+        borderRadius: "var(--radius-sm)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
       title="Copier le lien de candidature"
     >
       {copied ? (
-        <>
-          <Check size={14} style={{ color: "var(--success)" }} />
-          <span style={{ fontSize: "0.75rem", color: "var(--success)", fontWeight: 500 }}>Copié !</span>
-        </>
+        <Check size={16} style={{ color: "var(--success)" }} />
       ) : (
-        <>
-          <Copy size={14} />
-          <span style={{ fontSize: "0.75rem" }}>Lien</span>
-        </>
+        <Copy size={16} />
       )}
     </button>
   );

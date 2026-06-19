@@ -37,28 +37,19 @@ export default function ToggleFormStatusButton({ propertyId, isActive }: ToggleF
         padding: "0.5rem",
         borderRadius: "var(--radius-sm)",
         display: "flex",
-        gap: "0.25rem",
         alignItems: "center",
+        justifyContent: "center",
         cursor: loading ? "not-allowed" : "pointer",
         opacity: loading ? 0.7 : 1,
       }}
       title={isActive ? "Désactiver le formulaire" : "Activer le formulaire"}
     >
       {loading ? (
-        <>
-          <Loader2 size={14} className={styles.spinnerPrimary} style={{ animation: "spin 1s linear infinite" }} />
-          <span style={{ fontSize: "0.75rem" }}>En cours...</span>
-        </>
+        <Loader2 size={16} className={styles.spinnerPrimary} style={{ animation: "spin 1s linear infinite" }} />
       ) : isActive ? (
-        <>
-          <EyeOff size={14} />
-          <span style={{ fontSize: "0.75rem" }}>Désactiver</span>
-        </>
+        <EyeOff size={16} />
       ) : (
-        <>
-          <Eye size={14} />
-          <span style={{ fontSize: "0.75rem" }}>Activer</span>
-        </>
+        <Eye size={16} />
       )}
     </button>
   );
