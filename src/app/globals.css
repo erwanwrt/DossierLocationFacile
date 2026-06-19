@@ -3,26 +3,26 @@
 /* Dossier Location Facile - Minimalist Design System */
 
 :root {
-  /* Colors - Clean, Organic Forest Green Theme (Light Mode Only) */
-  --bg-primary: #fcfdfa;
+  /* Colors - Warm Taupe & Brown Theme (Light Mode Only) */
+  --bg-primary: #faf9f6;
   --bg-secondary: #ffffff;
-  --bg-tertiary: #f4f5f2;
+  --bg-tertiary: #f2f0eb;
   
-  --foreground: #1c2217;
-  --text-primary: #1c2217;
-  --text-secondary: #4a5443;
-  --text-muted: #889282;
+  --foreground: #221e1a;
+  --text-primary: #221e1a;
+  --text-secondary: #574e44;
+  --text-muted: #968c80;
   
-  --primary: #283618;
-  --primary-hover: #1b2510;
-  --primary-light: #f1f3ee;
+  --primary: #5e503f;
+  --primary-hover: #4a3f32;
+  --primary-light: #f5f3f0;
   
-  --accent: #606c38;
-  --accent-light: #fefae0;
+  --accent: #8c7a6b;
+  --accent-light: #f5ebe0;
   
-  --border-color: #e1e3de;
-  --border-hover: #cbd0c7;
-  --border-focus: #283618;
+  --border-color: #e6e2db;
+  --border-hover: #d2ccc3;
+  --border-focus: #5e503f;
   
   --success: #2a7e5c;
   --success-light: #e6f4ee;
@@ -38,9 +38,9 @@
   --radius-xl: 12px;
   
   /* Subtle, Flat Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(40, 54, 24, 0.05);
-  --shadow-md: 0 4px 12px 0 rgba(40, 54, 24, 0.03);
-  --shadow-lg: 0 8px 24px 0 rgba(40, 54, 24, 0.04);
+  --shadow-sm: 0 1px 2px 0 rgba(94, 80, 63, 0.05);
+  --shadow-md: 0 4px 12px 0 rgba(94, 80, 63, 0.03);
+  --shadow-lg: 0 8px 24px 0 rgba(94, 80, 63, 0.04);
   
   --transition-fast: 0.1s ease;
   --transition-normal: 0.2s ease;
