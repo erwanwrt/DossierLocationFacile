@@ -7,9 +7,33 @@ import Header from "@/components/Header";
 import CreatePropertyModal from "@/components/CreatePropertyModal";
 import CopyButton from "@/components/CopyButton";
 import ToggleFormStatusButton from "@/components/ToggleFormStatusButton";
+import EditPropertyModal from "@/components/EditPropertyModal";
 import DeletePropertyButton from "@/components/DeletePropertyButton";
 import styles from "@/styles/components.module.css";
-import { Building2, Eye, FileText, LayoutGrid, MapPin, Share2 } from "lucide-react";
+import { Building2, Eye, MapPin, Wallet } from "lucide-react";
+
+interface Submission {
+  id: string;
+  status: string;
+}
+
+interface Property {
+  id: string;
+  title: string;
+  description: string | null;
+  address: string;
+  slug: string;
+  rent: number;
+  created_at: string;
+  forms: {
+    require_guarantor: "none" | "optional" | "required";
+    is_active: boolean;
+  } | {
+    require_guarantor: "none" | "optional" | "required";
+    is_active: boolean;
+  }[];
+  submissions?: Submission[];
+}
 
 export default async function DashboardPage() {
   const headersList = await headers();
@@ -35,6 +59,7 @@ export default async function DashboardPage() {
       description,
       address,
       slug,
+      rent,
       created_at,
       forms ( require_guarantor, is_active ),
       submissions ( id, status )
@@ -72,9 +97,9 @@ export default async function DashboardPage() {
 
         {properties && properties.length > 0 ? (
           <div className={styles.grid3} style={{ marginTop: "1rem" }}>
-            {properties.map((property: any) => {
+            {properties.map((property: Property) => {
               const totalSubmissions = property.submissions?.length || 0;
-              const pendingSubmissions = property.submissions?.filter((s: any) => s.status === "pending").length || 0;
+              const pendingSubmissions = property.submissions?.filter((s: Submission) => s.status === "pending").length || 0;
               const publicLink = `${origin}/p/${property.slug}`;
               const formConfig = Array.isArray(property.forms) ? property.forms[0] : property.forms;
 
@@ -97,6 +122,16 @@ export default async function DashboardPage() {
                     <div style={{ display: "flex", gap: "0.5rem" }}>
                       <CopyButton text={publicLink} />
                       <ToggleFormStatusButton propertyId={property.id} isActive={formConfig?.is_active ?? true} />
+                      <EditPropertyModal
+                        property={{
+                          id: property.id,
+                          title: property.title,
+                          address: property.address,
+                          description: property.description,
+                          rent: property.rent || 0,
+                          require_guarantor: formConfig?.require_guarantor || "optional",
+                        }}
+                      />
                       <DeletePropertyButton propertyId={property.id} propertyTitle={property.title} />
                     </div>
                   </div>
@@ -111,12 +146,24 @@ export default async function DashboardPage() {
                     display: "flex", 
                     alignItems: "center", 
                     gap: "0.3rem",
-                    marginBottom: "1rem"
+                    marginBottom: "0.5rem"
                   }}>
                     <MapPin size={14} style={{ flexShrink: 0 }} />
                     <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {property.address}
                     </span>
+                  </p>
+
+                  <p style={{ 
+                    fontSize: "0.875rem", 
+                    color: "var(--text-secondary)", 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "0.3rem",
+                    marginBottom: "1rem"
+                  }}>
+                    <Wallet size={14} style={{ flexShrink: 0, color: "var(--primary)" }} />
+                    <span>Loyer : <strong>{property.rent ? `${property.rent} €` : "0 € (non spécifié)"}</strong> / mois</span>
                   </p>
 
                   {property.description && (

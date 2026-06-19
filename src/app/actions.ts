@@ -38,6 +38,7 @@ export async function createProperty(data: {
   address: string;
   description: string;
   require_guarantor: "none" | "optional" | "required";
+  rent: number;
 }) {
   try {
     const owner = await getAuthOwner();
@@ -63,6 +64,7 @@ export async function createProperty(data: {
         address: data.address,
         slug: slug,
         gdrive_folder_id: gdriveFolderId,
+        rent: data.rent || 0,
       })
       .select()
       .single();
@@ -90,6 +92,67 @@ export async function createProperty(data: {
 
     revalidatePath("/dashboard");
     return { success: true, propertyId: property.id };
+  } catch (error: any) {
+    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  }
+}
+
+export async function updateProperty(
+  propertyId: string,
+  data: {
+    title: string;
+    address: string;
+    description: string;
+    require_guarantor: "none" | "optional" | "required";
+    rent: number;
+  }
+) {
+  try {
+    const owner = await getAuthOwner();
+
+    // Verify property ownership before editing
+    const { data: property, error: fetchError } = await supabaseAdmin
+      .from("properties")
+      .select("id")
+      .eq("id", propertyId)
+      .eq("owner_id", owner.id)
+      .single();
+
+    if (fetchError || !property) {
+      return { error: "Propriété introuvable ou vous n'êtes pas le propriétaire." };
+    }
+
+    // 1. Update property general fields
+    const { error: propError } = await supabaseAdmin
+      .from("properties")
+      .update({
+        title: data.title,
+        description: data.description,
+        address: data.address,
+        rent: data.rent || 0,
+      })
+      .eq("id", propertyId);
+
+    if (propError) {
+      console.error("Supabase update property error:", propError);
+      return { error: "Impossible de modifier la propriété." };
+    }
+
+    // 2. Update form requirement config
+    const { error: formError } = await supabaseAdmin
+      .from("forms")
+      .update({
+        require_guarantor: data.require_guarantor,
+      })
+      .eq("property_id", propertyId);
+
+    if (formError) {
+      console.error("Supabase update form error:", formError);
+      return { error: "Impossible de modifier la configuration du formulaire." };
+    }
+
+    revalidatePath("/dashboard");
+    return { success: true };
   } catch (error: any) {
     return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
@@ -202,6 +265,55 @@ export async function updateSubmissionStatus(submissionId: string, status: "pend
     return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
 }
+
+export async function deleteSubmission(submissionId: string) {
+  try {
+    const owner = await getAuthOwner();
+
+    // Verify ownership of the property related to the submission
+    const { data: submission } = await supabaseAdmin
+      .from("submissions")
+      .select("id, property_id, gdrive_folder_id, properties ( owner_id )")
+      .eq("id", submissionId)
+      .single();
+
+    if (!submission) {
+      return { error: "Dossier introuvable." };
+    }
+
+    // @ts-ignore
+    if (submission.properties?.owner_id !== owner.id) {
+      return { error: "Non autorisé." };
+    }
+
+    // 1. Delete the folder on Google Drive if it exists
+    if (submission.gdrive_folder_id) {
+      try {
+        await deleteGDriveFile(submission.gdrive_folder_id);
+      } catch (err) {
+        console.error("Google Drive folder deletion failed for submission:", err);
+      }
+    }
+
+    // 2. Delete the submission from Supabase
+    const { error: deleteError } = await supabaseAdmin
+      .from("submissions")
+      .delete()
+      .eq("id", submissionId);
+
+    if (deleteError) {
+      console.error("Supabase delete submission error:", deleteError);
+      return { error: "Impossible de supprimer la candidature." };
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath(`/dashboard/submissions/${submission.property_id}`);
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  }
+}
+
 
 export async function toggleFormActive(propertyId: string, isActive: boolean) {
   try {

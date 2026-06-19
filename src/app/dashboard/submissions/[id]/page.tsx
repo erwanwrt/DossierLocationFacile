@@ -40,7 +40,7 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
   // Fetch property details
   const { data: property, error: propError } = await supabaseAdmin
     .from("properties")
-    .select("id, title, address, owner_id")
+    .select("id, title, address, rent, owner_id")
     .eq("id", propertyId)
     .eq("owner_id", session.user.id)
     .single();
@@ -125,6 +125,92 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
               if (submission.guarantor_type === "visale") guarantorLabel = "Garantie Visale";
               else if (submission.guarantor_type === "physical") guarantorLabel = "Garant physique";
 
+              // Calcul de solvabilité
+              const rent = property.rent || 0;
+              const tenantIncome = submission.tenant_income || 0;
+              const guarantorIncome = submission.guarantor_income || 0;
+              const hasPhysicalGuarantor = submission.guarantor_type === "physical";
+              const totalIncome = tenantIncome + (hasPhysicalGuarantor ? guarantorIncome : 0);
+              
+              let solvencyBadge = null;
+              if (rent > 0) {
+                if (totalIncome > 0) {
+                  let effortRate = 0;
+                  let badgeText = "";
+                  let ratio = "0.0";
+                  
+                  if (hasPhysicalGuarantor && guarantorIncome > 0) {
+                    effortRate = Math.round((rent / totalIncome) * 100);
+                    ratio = (totalIncome / rent).toFixed(1);
+                    const tenantRatioText = tenantIncome > 0 
+                      ? `${Math.round((rent / tenantIncome) * 100)}% seul` 
+                      : "sans revenus";
+                    badgeText = `Taux d'effort cumulé : ${effortRate}% (${ratio}x loyer) [Locataire : ${tenantRatioText}]`;
+                  } else {
+                    effortRate = Math.round((rent / tenantIncome) * 100);
+                    ratio = (tenantIncome / rent).toFixed(1);
+                    badgeText = `Taux d'effort : ${effortRate}% (${ratio}x loyer)`;
+                  }
+                  
+                  let badgeBg = "rgba(34, 197, 94, 0.1)"; // success light / green
+                  let badgeColor = "#15803d"; // success / dark green
+                  
+                  if (effortRate > 40) {
+                    badgeBg = "rgba(239, 68, 68, 0.1)"; // error light / red
+                    badgeColor = "#b91c1c"; // error / dark red
+                  } else if (effortRate > 33) {
+                    badgeBg = "rgba(249, 115, 22, 0.1)"; // warning light / orange
+                    badgeColor = "#c2410c"; // warning / dark orange
+                  }
+                  
+                  solvencyBadge = (
+                    <span style={{ 
+                      fontSize: "0.8rem", 
+                      padding: "0.2rem 0.5rem", 
+                      borderRadius: "4px", 
+                      backgroundColor: badgeBg, 
+                      color: badgeColor, 
+                      fontWeight: 600,
+                      display: "inline-flex",
+                      alignItems: "center"
+                    }}>
+                      {badgeText}
+                    </span>
+                  );
+                } else {
+                  const isStudentWithGuarantor = submission.tenant_situation === "student" && submission.guarantor_type !== "none";
+                  solvencyBadge = (
+                    <span style={{ 
+                      fontSize: "0.8rem", 
+                      padding: "0.2rem 0.5rem", 
+                      borderRadius: "4px", 
+                      backgroundColor: isStudentWithGuarantor ? "rgba(59, 130, 246, 0.1)" : "var(--border-color)", 
+                      color: isStudentWithGuarantor ? "#2563eb" : "var(--text-muted)", 
+                      fontWeight: 600,
+                      display: "inline-flex",
+                      alignItems: "center"
+                    }}>
+                      {isStudentWithGuarantor ? "Dossier Étudiant avec Garant" : "Revenus non renseignés / nuls"}
+                    </span>
+                  );
+                }
+              } else {
+                solvencyBadge = (
+                  <span style={{ 
+                    fontSize: "0.8rem", 
+                    padding: "0.2rem 0.5rem", 
+                    borderRadius: "4px", 
+                    backgroundColor: "var(--border-color)", 
+                    color: "var(--text-muted)", 
+                    fontWeight: 500,
+                    display: "inline-flex",
+                    alignItems: "center"
+                  }}>
+                    Loyer non spécifié pour ce bien
+                  </span>
+                );
+              }
+
               return (
                 <div key={submission.id} className={styles.card} style={{ borderLeft: "4px solid var(--primary)" }}>
                   {/* Submission Header */}
@@ -190,9 +276,19 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
                           <Wallet size={16} style={{ color: "var(--text-muted)" }} />
                           <span>Revenus : <strong>{submission.tenant_income} € / mois</strong> ({situationLabel})</span>
                         </div>
+                        {solvencyBadge && (
+                          <div style={{ paddingLeft: "1.5rem", marginTop: "-0.2rem", marginBottom: "0.2rem" }}>
+                            {solvencyBadge}
+                          </div>
+                        )}
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                           <Users size={16} style={{ color: "var(--text-muted)" }} />
-                          <span>Garant : <strong>{guarantorLabel}</strong></span>
+                          <span>
+                            Garant : <strong>{guarantorLabel}</strong>
+                            {hasPhysicalGuarantor && guarantorIncome > 0 && (
+                              <span> (Revenus : <strong>{guarantorIncome} € / mois</strong>)</span>
+                            )}
+                          </span>
                         </div>
                       </div>
                     </div>

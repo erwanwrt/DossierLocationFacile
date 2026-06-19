@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
     const tenantSituation = formData.get("tenant_situation") as string;
     const tenantIncomeRaw = formData.get("tenant_income") as string;
     const guarantorType = formData.get("guarantor_type") as string;
+    const guarantorIncomeRaw = formData.get("guarantor_income") as string;
     const tenantComment = formData.get("tenant_comment") as string || null;
 
     if (
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
     }
 
     const tenantIncome = parseFloat(tenantIncomeRaw) || 0;
+    const guarantorIncome = parseFloat(guarantorIncomeRaw) || 0;
 
     // 2. Fetch property details
     const { data: property, error: propError } = await supabaseAdmin
@@ -147,6 +149,7 @@ export async function POST(req: NextRequest) {
         tenant_situation: tenantSituation,
         tenant_income: tenantIncome,
         guarantor_type: guarantorType,
+        guarantor_income: guarantorIncome,
         gdrive_folder_id: tenantFolderId,
         files: filesLinks,
         status: "pending",

@@ -1,17 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { createProperty } from "@/app/actions";
+import { updateProperty } from "@/app/actions";
 import styles from "@/styles/components.module.css";
-import { Plus, X, Building, MapPin, AlignLeft, ShieldCheck, Euro } from "lucide-react";
+import { Pencil, X, Building, MapPin, AlignLeft, ShieldCheck, Euro } from "lucide-react";
 
-export default function CreatePropertyModal() {
+interface EditPropertyModalProps {
+  property: {
+    id: string;
+    title: string;
+    address: string;
+    description: string | null;
+    rent: number;
+    require_guarantor: "none" | "optional" | "required";
+  };
+}
+
+export default function EditPropertyModal({ property }: EditPropertyModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [title, setTitle] = useState("");
-  const [address, setAddress] = useState("");
-  const [description, setDescription] = useState("");
-  const [rent, setRent] = useState("");
-  const [requireGuarantor, setRequireGuarantor] = useState<"none" | "optional" | "required">("optional");
+  const [title, setTitle] = useState(property.title);
+  const [address, setAddress] = useState(property.address);
+  const [description, setDescription] = useState(property.description || "");
+  const [rent, setRent] = useState(property.rent.toString());
+  const [requireGuarantor, setRequireGuarantor] = useState<"none" | "optional" | "required">(property.require_guarantor);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,7 +32,7 @@ export default function CreatePropertyModal() {
     setError("");
 
     try {
-      const res = await createProperty({
+      const res = await updateProperty(property.id, {
         title,
         address,
         description,
@@ -32,16 +43,10 @@ export default function CreatePropertyModal() {
       if (res.error) {
         setError(res.error);
       } else {
-        // Reset and close
-        setTitle("");
-        setAddress("");
-        setDescription("");
-        setRent("");
-        setRequireGuarantor("optional");
         setIsOpen(false);
       }
     } catch (err) {
-      setError("Une erreur est survenue lors de la création.");
+      setError("Une erreur est survenue lors de la modification.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -52,11 +57,17 @@ export default function CreatePropertyModal() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className={`${styles.btn} ${styles.btnPrimary}`}
-        style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+        className={`${styles.btn} ${styles.btnSecondary}`}
+        style={{
+          padding: "0.5rem",
+          borderRadius: "var(--radius-sm)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+        title="Modifier la propriété"
       >
-        <Plus size={18} />
-        <span>Ajouter un bien</span>
+        <Pencil size={16} />
       </button>
 
       {isOpen && (
@@ -105,7 +116,7 @@ export default function CreatePropertyModal() {
 
             <h2 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Building size={22} style={{ color: "var(--primary)" }} />
-              Ajouter une nouvelle propriété
+              Modifier la propriété
             </h2>
 
             {error && (
@@ -124,13 +135,13 @@ export default function CreatePropertyModal() {
 
             <form onSubmit={handleSubmit}>
               <div className={styles.formGroup}>
-                <label className={styles.label} htmlFor="modal-title">
+                <label className={styles.label} htmlFor="edit-modal-title">
                   Nom du bien / Titre *
                 </label>
                 <div style={{ position: "relative" }}>
                   <Building size={16} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                   <input
-                    id="modal-title"
+                    id="edit-modal-title"
                     type="text"
                     required
                     placeholder="ex: Appartement T2 - Centre Ville"
@@ -144,13 +155,13 @@ export default function CreatePropertyModal() {
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label} htmlFor="modal-address">
+                <label className={styles.label} htmlFor="edit-modal-address">
                   Adresse complète *
                 </label>
                 <div style={{ position: "relative" }}>
                   <MapPin size={16} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                   <input
-                    id="modal-address"
+                    id="edit-modal-address"
                     type="text"
                     required
                     placeholder="ex: 12 Rue de la République, 75001 Paris"
@@ -164,13 +175,13 @@ export default function CreatePropertyModal() {
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label} htmlFor="modal-description">
+                <label className={styles.label} htmlFor="edit-modal-description">
                   Description / Notes
                 </label>
                 <div style={{ position: "relative" }}>
                   <AlignLeft size={16} style={{ position: "absolute", left: "1rem", top: "1rem", color: "var(--text-muted)" }} />
                   <textarea
-                    id="modal-description"
+                    id="edit-modal-description"
                     rows={3}
                     placeholder="ex: Proche de la gare, rénové en 2025..."
                     className={styles.textarea}
@@ -183,13 +194,13 @@ export default function CreatePropertyModal() {
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label} htmlFor="modal-rent">
+                <label className={styles.label} htmlFor="edit-modal-rent">
                   Loyer mensuel (€) *
                 </label>
                 <div style={{ position: "relative" }}>
                   <Euro size={16} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                   <input
-                    id="modal-rent"
+                    id="edit-modal-rent"
                     type="number"
                     required
                     min="0"
@@ -204,13 +215,13 @@ export default function CreatePropertyModal() {
               </div>
 
               <div className={styles.formGroup} style={{ marginBottom: "2rem" }}>
-                <label className={styles.label} htmlFor="modal-guarantor">
+                <label className={styles.label} htmlFor="edit-modal-guarantor">
                   Exigence du Garant
                 </label>
                 <div style={{ position: "relative" }}>
                   <ShieldCheck size={16} style={{ position: "absolute", left: "1rem", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
                   <select
-                    id="modal-guarantor"
+                    id="edit-modal-guarantor"
                     className={styles.select}
                     style={{ paddingLeft: "2.75rem" }}
                     value={requireGuarantor}
@@ -238,7 +249,7 @@ export default function CreatePropertyModal() {
                   className={`${styles.btn} ${styles.btnPrimary}`}
                   disabled={loading}
                 >
-                  {loading ? <div className={styles.spinner}></div> : "Créer"}
+                  {loading ? <div className={styles.spinner}></div> : "Modifier"}
                 </button>
               </div>
             </form>

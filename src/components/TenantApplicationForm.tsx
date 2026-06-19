@@ -27,6 +27,7 @@ export default function TenantApplicationForm({
   // Guarantor Options
   const [hasGuarantor, setHasGuarantor] = useState(requireGuarantor === "required");
   const [guarantorType, setGuarantorType] = useState<"visale" | "physical">("visale");
+  const [guarantorIncome, setGuarantorIncome] = useState("");
 
   // Files
   const [files, setFiles] = useState<Record<string, File | null>>({
@@ -68,6 +69,7 @@ export default function TenantApplicationForm({
     formData.append("tenant_situation", situation);
     formData.append("tenant_income", income);
     formData.append("guarantor_type", isGuarantorActive ? guarantorType : "none");
+    formData.append("guarantor_income", isGuarantorActive && guarantorType === "physical" ? guarantorIncome : "0");
     formData.append("tenant_comment", comment);
 
     // Append Files (if provided)
@@ -421,6 +423,20 @@ export default function TenantApplicationForm({
                   </div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }} className="animate-fade-in">
+                    <div className={styles.formGroup}>
+                      <label className={styles.label} htmlFor="guarantor_income">Revenus nets mensuels du garant (€) *</label>
+                      <input
+                        id="guarantor_income"
+                        type="number"
+                        required
+                        min="0"
+                        placeholder="ex: 2500"
+                        className={styles.input}
+                        value={guarantorIncome}
+                        onChange={(e) => setGuarantorIncome(e.target.value)}
+                        disabled={loading}
+                      />
+                    </div>
                     <div className={styles.formGroup}>
                       <label className={styles.label}>Pièce d'identité du garant (CNI / Passeport)</label>
                       <FileInput

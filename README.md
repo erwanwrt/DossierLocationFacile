@@ -14,7 +14,7 @@ Les locataires déposent leurs pièces justificatives via un lien unique et dyna
 - **Sécurité et simplicité** : Téléversement direct des pièces requises (pièce d'identité, justificatif de domicile, justificatifs de ressources, avis d'imposition, etc.).
 
 ### 🏢 Côté Propriétaire (Tableau de Bord)
-- **Gestion des biens immobiliers** : Ajout et suppression de propriétés avec génération automatique de slugs pour les URL de candidature.
+- **Gestion des biens immobiliers** : Ajout, modification et suppression de propriétés avec génération automatique de slugs pour les URL de candidature. Un bouton d'édition permet de modifier les détails du bien (titre, loyer, garant, etc.) directement depuis le tableau de bord.
 - **Contrôle des formulaires** : Activation/désactivation en un clic des formulaires publics, et configuration des exigences en matière de garants (optionnel, obligatoire, ou sans garant).
 - **Stockage structuré sur Google Drive** : Organisation automatique des fichiers dans votre Drive :
   ```text
@@ -25,8 +25,9 @@ Les locataires déposent leurs pièces justificatives via un lien unique et dyna
               ├── 📄 Income_proof_1.pdf
               └── ...
   ```
-- **Gestion des candidatures** : Suivi du statut des dossiers (*En attente*, *Accepté*, *Refusé*) avec liens directs vers les documents sur Google Drive.
+- **Gestion des candidatures** : Suivi du statut des dossiers (*En attente*, *Accepté*, *Refusé*) avec liens directs vers les documents sur Google Drive. Il est possible de **supprimer une candidature**, ce qui efface ses données et supprime automatiquement tous les fichiers correspondants de Google Drive.
 - **Nettoyage automatique (Cascade Delete)** : La suppression d'un bien supprime automatiquement sa configuration, ses candidatures en base de données, et **tous les fichiers/dossiers correspondants sur Google Drive**.
+
 
 ---
 

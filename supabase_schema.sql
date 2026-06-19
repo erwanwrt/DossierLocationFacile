@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS properties (
     address TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     gdrive_folder_id TEXT, -- Main folder ID for this property on Google Drive
+    rent NUMERIC NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -86,6 +87,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     tenant_situation TEXT NOT NULL, -- 'student', 'employee', 'other'
     tenant_income NUMERIC NOT NULL DEFAULT 0,
     guarantor_type TEXT NOT NULL DEFAULT 'none', -- 'none', 'visale', 'physical'
+    guarantor_income NUMERIC NOT NULL DEFAULT 0,
     gdrive_folder_id TEXT,
     files JSONB NOT NULL DEFAULT '{}'::jsonb, -- Map of doc_type -> google drive webViewLink
     status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'accepted', 'rejected'
