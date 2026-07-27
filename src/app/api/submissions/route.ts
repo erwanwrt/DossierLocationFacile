@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createGDriveFolder, uploadFileToGDrive } from "@/lib/google-drive";
+import {
+  sendAdminSubmissionNotification,
+  sendTenantSubmissionConfirmation,
+} from "@/lib/email";
 
 export const maxDuration = 60; // Allow function to run up to 60 seconds (useful on Vercel for file uploads)
 
@@ -56,7 +60,7 @@ export async function POST(req: NextRequest) {
     // 2. Fetch property details
     const { data: property, error: propError } = await supabaseAdmin
       .from("properties")
-      .select("id, title, gdrive_folder_id")
+      .select("id, title, gdrive_folder_id, owner_id")
       .eq("id", propertyId)
       .single();
 
@@ -166,11 +170,43 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { data: owner, error: ownerError } = await supabaseAdmin
+      .from("user")
+      .select("email")
+      .eq("id", property.owner_id)
+      .single();
+
+    if (ownerError || !owner?.email) {
+      console.error("Failed to find the property owner email:", ownerError);
+    } else {
+      const emailData = {
+        submissionId: submission.id,
+        propertyId: property.id,
+        propertyTitle: property.title,
+        tenantFirstName,
+        tenantLastName,
+        tenantEmail: tenantEmail.toLowerCase(),
+        adminEmail: owner.email,
+      };
+
+      const emailResults = await Promise.allSettled([
+        sendAdminSubmissionNotification(emailData),
+        sendTenantSubmissionConfirmation(emailData),
+      ]);
+
+      emailResults.forEach((result, index) => {
+        if (result.status === "rejected") {
+          const recipient = index === 0 ? "property owner" : "tenant";
+          console.error(`Failed to send submission email to ${recipient}:`, result.reason);
+        }
+      });
+    }
+
     return NextResponse.json({
       success: true,
       submissionId: submission.id,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error handling submission POST:", error);
     return NextResponse.json(
       { error: "Une erreur inattendue est survenue." },

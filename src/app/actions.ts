@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase";
 import { createGDriveFolder, deleteGDriveFile } from "@/lib/google-drive";
+import { sendTenantRejectionEmail } from "@/lib/email";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache"; // Next.js revalidatePath
 
@@ -31,6 +32,10 @@ async function getAuthOwner() {
   }
   
   return session.user;
+}
+
+function isUnauthorizedError(error: unknown) {
+  return error instanceof Error && error.message === "UNAUTHORIZED";
 }
 
 export async function createProperty(data: {
@@ -92,8 +97,8 @@ export async function createProperty(data: {
 
     revalidatePath("/dashboard");
     return { success: true, propertyId: property.id };
-  } catch (error: any) {
-    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  } catch (error: unknown) {
+    return { error: isUnauthorizedError(error) ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
 }
 
@@ -153,8 +158,8 @@ export async function updateProperty(
 
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  } catch (error: unknown) {
+    return { error: isUnauthorizedError(error) ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
 }
 
@@ -223,8 +228,8 @@ export async function deleteProperty(propertyId: string) {
 
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  } catch (error: unknown) {
+    return { error: isUnauthorizedError(error) ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
 }
 
@@ -235,7 +240,7 @@ export async function updateSubmissionStatus(submissionId: string, status: "pend
     // Verify ownership of the property related to the submission
     const { data: submission } = await supabaseAdmin
       .from("submissions")
-      .select("id, property_id, properties ( owner_id )")
+      .select("id, property_id, status, tenant_first_name, tenant_email, properties ( owner_id, title )")
       .eq("id", submissionId)
       .single();
 
@@ -243,8 +248,12 @@ export async function updateSubmissionStatus(submissionId: string, status: "pend
       return { error: "Dossier introuvable." };
     }
 
-    // @ts-ignore
-    if (submission.properties?.owner_id !== owner.id) {
+    const property = submission.properties as unknown as {
+      owner_id: string;
+      title: string;
+    } | null;
+
+    if (property?.owner_id !== owner.id) {
       return { error: "Non autorisé." };
     }
 
@@ -258,11 +267,42 @@ export async function updateSubmissionStatus(submissionId: string, status: "pend
       return { error: "Impossible de mettre à jour le statut du dossier." };
     }
 
+    if (status === "rejected" && submission.status !== "rejected") {
+      try {
+        await sendTenantRejectionEmail({
+          submissionId: submission.id,
+          propertyTitle: property.title,
+          tenantFirstName: submission.tenant_first_name,
+          tenantEmail: submission.tenant_email,
+        });
+      } catch (emailError) {
+        console.error("Failed to send tenant rejection email:", emailError);
+
+        const { error: rollbackError } = await supabaseAdmin
+          .from("submissions")
+          .update({ status: submission.status })
+          .eq("id", submissionId);
+
+        if (rollbackError) {
+          console.error("Failed to roll back submission status:", rollbackError);
+          return {
+            error:
+              "Le dossier a été refusé, mais l'e-mail n'a pas pu être envoyé. Vérifiez la configuration Resend.",
+          };
+        }
+
+        return {
+          error:
+            "L'e-mail de refus n'a pas pu être envoyé. Le statut du dossier est resté inchangé.",
+        };
+      }
+    }
+
     revalidatePath("/dashboard");
     revalidatePath(`/dashboard/submissions/${submission.property_id}`);
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  } catch (error: unknown) {
+    return { error: isUnauthorizedError(error) ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
 }
 
@@ -281,8 +321,11 @@ export async function deleteSubmission(submissionId: string) {
       return { error: "Dossier introuvable." };
     }
 
-    // @ts-ignore
-    if (submission.properties?.owner_id !== owner.id) {
+    const property = submission.properties as unknown as {
+      owner_id: string;
+    } | null;
+
+    if (property?.owner_id !== owner.id) {
       return { error: "Non autorisé." };
     }
 
@@ -309,8 +352,8 @@ export async function deleteSubmission(submissionId: string) {
     revalidatePath("/dashboard");
     revalidatePath(`/dashboard/submissions/${submission.property_id}`);
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  } catch (error: unknown) {
+    return { error: isUnauthorizedError(error) ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
 }
 
@@ -344,7 +387,7 @@ export async function toggleFormActive(propertyId: string, isActive: boolean) {
 
     revalidatePath("/dashboard");
     return { success: true };
-  } catch (error: any) {
-    return { error: error.message === "UNAUTHORIZED" ? "Non autorisé." : "Une erreur inattendue est survenue." };
+  } catch (error: unknown) {
+    return { error: isUnauthorizedError(error) ? "Non autorisé." : "Une erreur inattendue est survenue." };
   }
 }

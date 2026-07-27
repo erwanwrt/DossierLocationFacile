@@ -12,6 +12,7 @@ Les locataires déposent leurs pièces justificatives via un lien unique et dyna
 - **Zéro inscription** : Dépôt de dossier ultra-rapide pour maximiser le taux de complétion.
 - **Formulaire intelligent et dynamique** : Les champs s'adaptent en temps réel selon la situation du candidat (étudiant, salarié, autre) et la présence ou non d'un garant (physique ou garantie Visale).
 - **Sécurité et simplicité** : Téléversement direct des pièces requises (pièce d'identité, justificatif de domicile, justificatifs de ressources, avis d'imposition, etc.).
+- **Confirmation de dépôt** : Le candidat reçoit automatiquement un e-mail confirmant que son dossier a bien été transmis.
 
 ### 🏢 Côté Propriétaire (Tableau de Bord)
 - **Gestion des biens immobiliers** : Ajout, modification et suppression de propriétés avec génération automatique de slugs pour les URL de candidature. Un bouton d'édition permet de modifier les détails du bien (titre, loyer, garant, etc.) directement depuis le tableau de bord.
@@ -26,6 +27,7 @@ Les locataires déposent leurs pièces justificatives via un lien unique et dyna
               └── ...
   ```
 - **Gestion des candidatures** : Suivi du statut des dossiers (*En attente*, *Accepté*, *Refusé*) avec liens directs vers les documents sur Google Drive. Il est possible de **supprimer une candidature**, ce qui efface ses données et supprime automatiquement tous les fichiers correspondants de Google Drive.
+- **Notifications par e-mail** : Le propriétaire reçoit un e-mail à chaque nouveau dépôt. Lorsqu'un dossier est refusé, le candidat reçoit un message générique ; aucun e-mail automatique n'est envoyé pour un dossier accepté.
 - **Nettoyage automatique (Cascade Delete)** : La suppression d'un bien supprime automatiquement sa configuration, ses candidatures en base de données, et **tous les fichiers/dossiers correspondants sur Google Drive**.
 
 
@@ -37,6 +39,7 @@ Les locataires déposent leurs pièces justificatives via un lien unique et dyna
 - **Base de données** : [Supabase (PostgreSQL)](https://supabase.com/)
 - **Authentification** : [Better-Auth](https://www.better-auth.com/) (avec fournisseur de clés d'accès)
 - **Stockage** : [Google Drive API](https://developers.google.com/drive) (via la bibliothèque officielle `googleapis`)
+- **E-mails transactionnels** : [Resend](https://resend.com/)
 - **Design & UI** : Vanilla CSS moderne avec variables de style CSS et icônes [Lucide React](https://lucide.dev/)
 
 ---
@@ -44,7 +47,7 @@ Les locataires déposent leurs pièces justificatives via un lien unique et dyna
 ## 🚀 Installation et Configuration Locale
 
 ### 1. Prérequis
-Assurez-vous d'avoir installé [Node.js](https://nodejs.org/) (v18+) et d'avoir un compte [Supabase](https://supabase.com/) et une console [Google Cloud](https://console.cloud.google.com/).
+Assurez-vous d'avoir installé [Node.js](https://nodejs.org/) (v20.9+) et d'avoir un compte [Supabase](https://supabase.com/), une console [Google Cloud](https://console.cloud.google.com/) et un compte [Resend](https://resend.com/).
 
 ### 2. Cloner le projet
 ```bash
@@ -77,8 +80,12 @@ Remplissez les variables d'environnement suivantes dans `.env.local` :
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | E-mail du compte de service Google Cloud | `uploader-service-account@...` |
 | `GOOGLE_PRIVATE_KEY` | Clé privée associée au compte de service | `"-----BEGIN PRIVATE KEY-----\nMIIEvg...-----END..."` |
 | `GOOGLE_DRIVE_FOLDER_ID` | Identifiant du dossier parent sur votre Google Drive | `1a2b3c4d5e6f...` |
+| `RESEND_API_KEY` | Clé d'API Resend utilisée uniquement côté serveur | `re_...` |
+| `RESEND_FROM_EMAIL` | Expéditeur des notifications, utilisant un domaine vérifié dans Resend | `Dossier Location Facile <candidatures@exemple.fr>` |
 
 > 💡 **Alternative d'authentification Google** : Vous pouvez aussi configurer l'authentification via Refresh Token OAuth2 en renseignant `GOOGLE_REFRESH_TOKEN`, `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` à la place du Compte de Service Google.
+
+> ✉️ **Configuration Resend** : Vérifiez le domaine de `RESEND_FROM_EMAIL` dans Resend avant la mise en production. L'adresse administrateur destinataire est celle du compte propriétaire associé au bien.
 
 ---
 
