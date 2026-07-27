@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
-const bcryptjs = require("bcryptjs");
 
 const envPath = path.join(__dirname, "../../.env.local");
 if (fs.existsSync(envPath)) {

@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import styles from "@/styles/components.module.css";
-import { User, Briefcase, ShieldAlert, FileUp, CheckCircle, Mail, Phone, UserCheck, AlertTriangle, MessageSquare } from "lucide-react";
+import { User, Briefcase, FileUp, CheckCircle, Mail, Phone, UserCheck, AlertTriangle, MessageSquare } from "lucide-react";
+
+type TenantSituation = "employee" | "student" | "other";
 
 interface TenantApplicationFormProps {
   propertyId: string;
@@ -20,7 +22,7 @@ export default function TenantApplicationForm({
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [situation, setSituation] = useState<"employee" | "student" | "other">("employee");
+  const [situation, setSituation] = useState<TenantSituation>("employee");
   const [income, setIncome] = useState("");
   const [comment, setComment] = useState("");
 
@@ -263,7 +265,9 @@ export default function TenantApplicationForm({
                 id="situation"
                 className={styles.select}
                 value={situation}
-                onChange={(e) => setSituation(e.target.value as any)}
+                onChange={(e) =>
+                  setSituation(e.target.value as TenantSituation)
+                }
                 disabled={loading}
               >
                 <option value="employee">Salarié / Employé</option>

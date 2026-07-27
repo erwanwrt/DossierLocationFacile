@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import styles from "@/styles/components.module.css";
 import { ShieldCheck, FolderUp, CheckSquare, ArrowRight } from "lucide-react";
@@ -8,7 +9,7 @@ export default function HomePage() {
       {/* Header */}
       <header className={styles.navbar}>
         <div className={styles.logo}>
-          <img src="/logo.png" alt="Logo" width={30} height={30} />
+          <Image src="/logo.png" alt="Logo" width={30} height={30} />
           <span>Dossier Location Facile</span>
         </div>
         <Link 

@@ -1,10 +1,11 @@
 "use client";
 
 import { authClient } from "@/lib/auth-client";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import styles from "@/styles/components.module.css";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 interface HeaderProps {
   userName: string;
@@ -35,7 +36,7 @@ export default function Header({ userName }: HeaderProps) {
   return (
     <header className={styles.navbar}>
       <div className={styles.logo}>
-        <img src="/logo.png" alt="Logo" width={30} height={30} />
+        <Image src="/logo.png" alt="Logo" width={30} height={30} />
         <span>Dossier Location Facile</span>
       </div>
 

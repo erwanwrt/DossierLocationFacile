@@ -30,7 +30,7 @@ export default function LoginPage() {
         router.push("/dashboard");
         router.refresh();
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError("Une erreur est survenue lors de la connexion.");
       console.error(err);
     } finally {

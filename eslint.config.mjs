@@ -7,6 +7,12 @@ const eslintConfig = defineConfig([
   ...tseslint.configs.recommended,
   nextPlugin.configs["core-web-vitals"],
   reactHooks.configs.flat.recommended,
+  {
+    files: ["src/scripts/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   globalIgnores([
     ".next/**",
     "out/**",

@@ -26,6 +26,22 @@ interface SubmissionsPageProps {
   params: Promise<{ id: string }>;
 }
 
+interface Submission {
+  id: string;
+  created_at: string;
+  status: "pending" | "accepted" | "rejected";
+  tenant_first_name: string;
+  tenant_last_name: string;
+  tenant_email: string;
+  tenant_phone: string;
+  tenant_situation: "employee" | "student" | "other";
+  tenant_income: number;
+  guarantor_type: "none" | "visale" | "physical";
+  guarantor_income: number;
+  files: Record<string, string> | null;
+  tenant_comment: string | null;
+}
+
 export default async function SubmissionsPage({ params }: SubmissionsPageProps) {
   const { id: propertyId } = await params;
   const headersList = await headers();
@@ -60,6 +76,8 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
     console.error("Error fetching submissions:", subError);
   }
 
+  const typedSubmissions = (submissions ?? []) as Submission[];
+
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Header userName={session.user.name || session.user.email} />
@@ -93,9 +111,9 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
           </p>
         </div>
 
-        {submissions && submissions.length > 0 ? (
+        {typedSubmissions.length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
-            {submissions.map((submission: any) => {
+            {typedSubmissions.map((submission) => {
               const formattedDate = new Date(submission.created_at).toLocaleDateString("fr-FR", {
                 day: "numeric",
                 month: "long",
