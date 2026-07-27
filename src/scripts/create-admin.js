@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
+const { getVerifiedDatabaseConfig } = require("../lib/database-ssl");
 const bcryptjs = require("bcryptjs");
 const crypto = require("crypto");
 const readline = require("readline");
@@ -71,7 +72,7 @@ async function main() {
 
   console.log(`\nConnexion à la base de données...`);
   const pool = new Pool({
-    connectionString: databaseUrl,
+    ...getVerifiedDatabaseConfig(databaseUrl),
     connectionTimeoutMillis: 5000,
   });
 

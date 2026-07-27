@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
+const { getVerifiedDatabaseConfig } = require("../lib/database-ssl");
 
 const envPath = path.join(__dirname, "../../.env.local");
 if (fs.existsSync(envPath)) {
@@ -27,7 +28,7 @@ if (!databaseUrl) {
 
 async function main() {
   console.log("Connecting to database to debug...");
-  const pool = new Pool({ connectionString: databaseUrl });
+  const pool = new Pool(getVerifiedDatabaseConfig(databaseUrl));
 
   try {
     const users = await pool.query('SELECT * FROM "user"');

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["better-auth"],
+  outputFileTracingIncludes: {
+    "/*": ["./certificates/supabase-prod-ca-2021.crt"],
+  },
   async headers() {
     return [
       {

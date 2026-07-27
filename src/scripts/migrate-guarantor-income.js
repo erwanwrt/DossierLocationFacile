@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
+const { getVerifiedDatabaseConfig } = require("../lib/database-ssl");
 
 // Load environment variables from .env.local
 const envPath = path.join(__dirname, "../../.env.local");
@@ -29,7 +30,7 @@ if (!databaseUrl) {
 async function main() {
   console.log("Connexion à la base de données...");
   const pool = new Pool({
-    connectionString: databaseUrl,
+    ...getVerifiedDatabaseConfig(databaseUrl),
     connectionTimeoutMillis: 5000,
   });
 

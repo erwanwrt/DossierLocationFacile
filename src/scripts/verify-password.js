@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
+const { getVerifiedDatabaseConfig } = require("../lib/database-ssl");
 const bcryptjs = require("bcryptjs");
 const readline = require("readline");
 
@@ -50,7 +51,7 @@ async function main() {
   }
 
   console.log("Connexion à la base de données...");
-  const pool = new Pool({ connectionString: databaseUrl });
+  const pool = new Pool(getVerifiedDatabaseConfig(databaseUrl));
 
   try {
     const checkRes = await pool.query('SELECT id FROM "user" WHERE email = $1', [email]);

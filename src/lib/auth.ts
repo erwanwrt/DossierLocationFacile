@@ -2,12 +2,13 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { Pool } from "pg";
 import bcryptjs from "bcryptjs";
+import { getVerifiedDatabaseConfig } from "./database-ssl";
 
 // Database Pool for PostgreSQL connection
 // We use a global variable to cache the pool in development, preventing connection leaks.
 const globalForPool = global as unknown as { pool: Pool };
 const pool = globalForPool.pool || new Pool({
-  connectionString: process.env.DATABASE_URL,
+  ...getVerifiedDatabaseConfig(process.env.DATABASE_URL),
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
