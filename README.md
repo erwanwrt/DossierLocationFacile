@@ -47,7 +47,7 @@ Les locataires déposent leurs pièces justificatives via un lien unique et dyna
 ## 🚀 Installation et Configuration Locale
 
 ### 1. Prérequis
-Assurez-vous d'avoir installé [Node.js](https://nodejs.org/) (v20.9+) et d'avoir un compte [Supabase](https://supabase.com/), une console [Google Cloud](https://console.cloud.google.com/) et un compte [Resend](https://resend.com/).
+Assurez-vous d'avoir installé [Node.js](https://nodejs.org/) (v20.19+) et d'avoir un compte [Supabase](https://supabase.com/), une console [Google Cloud](https://console.cloud.google.com/) et un compte [Resend](https://resend.com/).
 
 ### 2. Cloner le projet
 ```bash
