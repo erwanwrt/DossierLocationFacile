@@ -5,168 +5,328 @@ import {
   sendAdminSubmissionNotification,
   sendTenantSubmissionConfirmation,
 } from "@/lib/email";
+import {
+  MAX_REQUEST_BYTES,
+  parseSecureMultipartRequest,
+  UploadSecurityError,
+} from "@/lib/upload-security";
+import {
+  enforceSubmissionRateLimit,
+  getClientIp,
+} from "@/lib/submission-abuse-protection";
 
-export const maxDuration = 60; // Allow function to run up to 60 seconds (useful on Vercel for file uploads)
+export const maxDuration = 60;
+export const runtime = "nodejs";
 
-const FILE_KEYS = [
-  "tenant_cni",
-  "tenant_payslips",
-  "tenant_school_cert",
-  "tenant_tax_notice",
-  "tenant_rent_receipts",
-  "guarantor_visale",
-  "guarantor_cni",
-  "guarantor_payslips",
-  "guarantor_tax_notice",
-  "guarantor_address_proof",
-  "guarantor_letter",
-];
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_PATTERN = /^[+0-9().\s-]{6,30}$/;
+const TENANT_SITUATIONS = new Set(["employee", "student", "other"]);
+const GUARANTOR_TYPES = new Set(["none", "visale", "physical"]);
 
-export async function POST(req: NextRequest) {
+interface SubmissionFields {
+  propertyId: string;
+  tenantFirstName: string;
+  tenantLastName: string;
+  tenantEmail: string;
+  tenantPhone: string;
+  tenantSituation: string;
+  tenantIncome: number;
+  guarantorType: string;
+  guarantorIncome: number;
+  tenantComment: string | null;
+}
+
+function jsonResponse(
+  body: Record<string, unknown>,
+  status: number,
+  additionalHeaders?: HeadersInit
+) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      ...additionalHeaders,
+    },
+  });
+}
+
+function getRequiredTextField(
+  fields: Record<string, string>,
+  key: string,
+  maximumLength: number
+) {
+  const value = fields[key]?.trim();
+  if (!value || value.length > maximumLength || /[\u0000-\u001f]/.test(value)) {
+    throw new UploadSecurityError(
+      "Veuillez vérifier les champs obligatoires du formulaire.",
+      400,
+      "invalid_text_field"
+    );
+  }
+
+  return value;
+}
+
+function parseMoney(value: string | undefined, required: boolean) {
+  const normalized = value?.trim();
+  if (!normalized && !required) {
+    return 0;
+  }
+
+  if (
+    !normalized ||
+    !/^\d{1,7}(?:[.,]\d{1,2})?$/.test(normalized)
+  ) {
+    throw new UploadSecurityError(
+      "Les revenus indiqués sont invalides.",
+      400,
+      "invalid_income"
+    );
+  }
+
+  const amount = Number(normalized.replace(",", "."));
+  if (!Number.isFinite(amount) || amount < 0 || amount > 10_000_000) {
+    throw new UploadSecurityError(
+      "Les revenus indiqués sont invalides.",
+      400,
+      "invalid_income"
+    );
+  }
+
+  return amount;
+}
+
+function validateSubmissionFields(
+  fields: Record<string, string>
+): SubmissionFields {
+  const propertyId = getRequiredTextField(fields, "property_id", 36);
+  const tenantFirstName = getRequiredTextField(
+    fields,
+    "tenant_first_name",
+    100
+  );
+  const tenantLastName = getRequiredTextField(
+    fields,
+    "tenant_last_name",
+    100
+  );
+  const tenantEmail = getRequiredTextField(fields, "tenant_email", 254)
+    .toLowerCase();
+  const tenantPhone = getRequiredTextField(fields, "tenant_phone", 30);
+  const tenantSituation = getRequiredTextField(
+    fields,
+    "tenant_situation",
+    20
+  );
+  const guarantorType = getRequiredTextField(
+    fields,
+    "guarantor_type",
+    20
+  );
+  const tenantComment = fields.tenant_comment?.trim() || null;
+
+  if (!UUID_PATTERN.test(propertyId)) {
+    throw new UploadSecurityError(
+      "Le bien demandé est invalide.",
+      400,
+      "invalid_property_id"
+    );
+  }
+
+  if (!EMAIL_PATTERN.test(tenantEmail)) {
+    throw new UploadSecurityError(
+      "L’adresse email est invalide.",
+      400,
+      "invalid_email"
+    );
+  }
+
+  if (!PHONE_PATTERN.test(tenantPhone)) {
+    throw new UploadSecurityError(
+      "Le numéro de téléphone est invalide.",
+      400,
+      "invalid_phone"
+    );
+  }
+
+  if (!TENANT_SITUATIONS.has(tenantSituation)) {
+    throw new UploadSecurityError(
+      "La situation professionnelle est invalide.",
+      400,
+      "invalid_tenant_situation"
+    );
+  }
+
+  if (!GUARANTOR_TYPES.has(guarantorType)) {
+    throw new UploadSecurityError(
+      "Le type de garant est invalide.",
+      400,
+      "invalid_guarantor_type"
+    );
+  }
+
+  if (tenantComment && tenantComment.length > 2_000) {
+    throw new UploadSecurityError(
+      "Le commentaire dépasse la longueur autorisée.",
+      400,
+      "comment_too_long"
+    );
+  }
+
+  return {
+    propertyId,
+    tenantFirstName,
+    tenantLastName,
+    tenantEmail,
+    tenantPhone,
+    tenantSituation,
+    tenantIncome: parseMoney(fields.tenant_income, true),
+    guarantorType,
+    guarantorIncome: parseMoney(
+      fields.guarantor_income,
+      guarantorType === "physical"
+    ),
+    tenantComment,
+  };
+}
+
+function rejectOversizedContentLength(request: Request) {
+  const header = request.headers.get("content-length");
+  if (!header) {
+    return null;
+  }
+
+  const contentLength = Number(header);
+  if (
+    !Number.isSafeInteger(contentLength) ||
+    contentLength < 0 ||
+    contentLength > MAX_REQUEST_BYTES
+  ) {
+    return jsonResponse(
+      { error: "La taille totale du dossier dépasse la limite autorisée de 27 Mo." },
+      413
+    );
+  }
+
+  return null;
+}
+
+export async function POST(request: NextRequest) {
+  const oversizedResponse = rejectOversizedContentLength(request);
+  if (oversizedResponse) {
+    return oversizedResponse;
+  }
+
+  const clientIp =
+    getClientIp(request.headers) ||
+    (process.env.NODE_ENV === "production" ? null : "127.0.0.1");
+  if (!clientIp) {
+    return jsonResponse(
+      { error: "Impossible de vérifier l’origine de la requête." },
+      400
+    );
+  }
+
   try {
-    const formData = await req.formData();
-
-    // 1. Extract and validate text fields
-    const propertyId = formData.get("property_id") as string;
-    const tenantFirstName = formData.get("tenant_first_name") as string;
-    const tenantLastName = formData.get("tenant_last_name") as string;
-    const tenantEmail = formData.get("tenant_email") as string;
-    const tenantPhone = formData.get("tenant_phone") as string;
-    const tenantSituation = formData.get("tenant_situation") as string;
-    const tenantIncomeRaw = formData.get("tenant_income") as string;
-    const guarantorType = formData.get("guarantor_type") as string;
-    const guarantorIncomeRaw = formData.get("guarantor_income") as string;
-    const tenantComment = formData.get("tenant_comment") as string || null;
-
-    if (
-      !propertyId ||
-      !tenantFirstName ||
-      !tenantLastName ||
-      !tenantEmail ||
-      !tenantPhone ||
-      !tenantSituation ||
-      !tenantIncomeRaw ||
-      !guarantorType
-    ) {
-      return NextResponse.json(
-        { error: "Veuillez remplir tous les champs obligatoires du formulaire." },
-        { status: 400 }
+    const rateLimit = await enforceSubmissionRateLimit(clientIp);
+    if (!rateLimit.allowed) {
+      return jsonResponse(
+        {
+          error:
+            "Trop de tentatives ont été effectuées. Veuillez réessayer plus tard.",
+        },
+        429,
+        {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+        }
       );
     }
 
-    const tenantIncome = parseFloat(tenantIncomeRaw) || 0;
-    const guarantorIncome = parseFloat(guarantorIncomeRaw) || 0;
+    const parsedUpload = await parseSecureMultipartRequest(request);
+    const fields = validateSubmissionFields(parsedUpload.fields);
 
-    // 2. Fetch property details
-    const { data: property, error: propError } = await supabaseAdmin
+    const files = Object.values(parsedUpload.files);
+
+    const { data: property, error: propertyError } = await supabaseAdmin
       .from("properties")
       .select("id, title, gdrive_folder_id, owner_id")
-      .eq("id", propertyId)
+      .eq("id", fields.propertyId)
       .single();
 
-    if (propError || !property) {
-      return NextResponse.json(
-        { error: "Propriété introuvable." },
-        { status: 404 }
-      );
+    if (propertyError || !property) {
+      return jsonResponse({ error: "Propriété introuvable." }, 404);
     }
 
-    // 3. Resolve property Google Drive folder
     let propertyFolderId = property.gdrive_folder_id;
     if (!propertyFolderId) {
-      try {
-        const parentId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-        propertyFolderId = await createGDriveFolder(property.title, parentId || undefined);
-        
-        // Save property folder ID back to DB
-        await supabaseAdmin
-          .from("properties")
-          .update({ gdrive_folder_id: propertyFolderId })
-          .eq("id", propertyId);
-      } catch (err) {
-        console.error("Failed to create property folder in fallback:", err);
-        return NextResponse.json(
-          { error: "Erreur lors de la configuration du stockage Google Drive." },
-          { status: 500 }
-        );
-      }
-    }
-
-    // 4. Create subfolder for this tenant submission
-    // Format: "NOM Prenom - AAAA-MM-JJ"
-    const dateStr = new Date().toISOString().split("T")[0];
-    const tenantFolderName = `${tenantLastName.toUpperCase()} ${tenantFirstName} - ${dateStr}`;
-    let tenantFolderId: string;
-    try {
-      tenantFolderId = await createGDriveFolder(tenantFolderName, propertyFolderId);
-    } catch (err) {
-      console.error("Failed to create tenant subfolder:", err);
-      return NextResponse.json(
-        { error: "Impossible de créer le dossier de stockage pour votre candidature." },
-        { status: 500 }
+      const parentId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+      propertyFolderId = await createGDriveFolder(
+        property.title,
+        parentId || undefined
       );
-    }
 
-    // 5. Upload files to Google Drive
-    const fileIds: Record<string, string> = {};
+      const { error: folderUpdateError } = await supabaseAdmin
+        .from("properties")
+        .update({ gdrive_folder_id: propertyFolderId })
+        .eq("id", fields.propertyId);
 
-    for (const key of FILE_KEYS) {
-      const file = formData.get(key) as File | null;
-      
-      if (file && file.size > 0 && typeof file.arrayBuffer === "function") {
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          
-          // Generate a clean filename: e.g. "cni.pdf" instead of long messy string, but keep extension
-          const ext = file.name.split(".").pop() || "pdf";
-          // We can rename files to be standardized and clean in GDrive
-          const cleanFileName = `${key.replace("tenant_", "").replace("guarantor_", "")}.${ext}`;
-
-          const uploadRes = await uploadFileToGDrive(
-            buffer,
-            cleanFileName,
-            file.type,
-            tenantFolderId
-          );
-
-          fileIds[key] = uploadRes.id;
-        } catch (uploadErr) {
-          console.error(`Error uploading file ${key}:`, uploadErr);
-          return NextResponse.json(
-            { error: `Erreur lors de l'envoi du fichier : ${file.name}.` },
-            { status: 500 }
-          );
-        }
+      if (folderUpdateError) {
+        throw folderUpdateError;
       }
     }
 
-    // 6. Insert submission data in Supabase
+    const date = new Date().toISOString().split("T")[0];
+    const tenantFolderName =
+      `${fields.tenantLastName.toUpperCase()} ${fields.tenantFirstName} - ${date}`;
+    const tenantFolderId = await createGDriveFolder(
+      tenantFolderName,
+      propertyFolderId
+    );
+
+    const fileIds: Record<string, string> = {};
+    for (const file of files) {
+      const baseFileName = file.fieldName
+        .replace("tenant_", "")
+        .replace("guarantor_", "");
+      const upload = await uploadFileToGDrive(
+        file.buffer,
+        `${baseFileName}.${file.extension}`,
+        file.mimeType,
+        tenantFolderId
+      );
+      fileIds[file.fieldName] = upload.id;
+    }
+
     const { data: submission, error: insertError } = await supabaseAdmin
       .from("submissions")
       .insert({
-        property_id: propertyId,
-        tenant_first_name: tenantFirstName,
-        tenant_last_name: tenantLastName,
-        tenant_email: tenantEmail.toLowerCase(),
-        tenant_phone: tenantPhone,
-        tenant_situation: tenantSituation,
-        tenant_income: tenantIncome,
-        guarantor_type: guarantorType,
-        guarantor_income: guarantorIncome,
+        property_id: fields.propertyId,
+        tenant_first_name: fields.tenantFirstName,
+        tenant_last_name: fields.tenantLastName,
+        tenant_email: fields.tenantEmail,
+        tenant_phone: fields.tenantPhone,
+        tenant_situation: fields.tenantSituation,
+        tenant_income: fields.tenantIncome,
+        guarantor_type: fields.guarantorType,
+        guarantor_income: fields.guarantorIncome,
         gdrive_folder_id: tenantFolderId,
         files: fileIds,
         status: "pending",
-        tenant_comment: tenantComment,
+        tenant_comment: fields.tenantComment,
       })
       .select()
       .single();
 
-    if (insertError) {
+    if (insertError || !submission) {
       console.error("Failed to insert submission in DB:", insertError);
-      return NextResponse.json(
-        { error: "Une erreur est survenue lors de l'enregistrement de votre dossier." },
-        { status: 500 }
+      return jsonResponse(
+        {
+          error:
+            "Une erreur est survenue lors de l’enregistrement de votre dossier.",
+        },
+        500
       );
     }
 
@@ -183,9 +343,9 @@ export async function POST(req: NextRequest) {
         submissionId: submission.id,
         propertyId: property.id,
         propertyTitle: property.title,
-        tenantFirstName,
-        tenantLastName,
-        tenantEmail: tenantEmail.toLowerCase(),
+        tenantFirstName: fields.tenantFirstName,
+        tenantLastName: fields.tenantLastName,
+        tenantEmail: fields.tenantEmail,
         adminEmail: owner.email,
       };
 
@@ -197,20 +357,30 @@ export async function POST(req: NextRequest) {
       emailResults.forEach((result, index) => {
         if (result.status === "rejected") {
           const recipient = index === 0 ? "property owner" : "tenant";
-          console.error(`Failed to send submission email to ${recipient}:`, result.reason);
+          console.error(
+            `Failed to send submission email to ${recipient}:`,
+            result.reason
+          );
         }
       });
     }
 
-    return NextResponse.json({
-      success: true,
-      submissionId: submission.id,
-    });
+    return jsonResponse(
+      {
+        success: true,
+        submissionId: submission.id,
+      },
+      200
+    );
   } catch (error: unknown) {
+    if (error instanceof UploadSecurityError) {
+      return jsonResponse({ error: error.message }, error.status);
+    }
+
     console.error("Error handling submission POST:", error);
-    return NextResponse.json(
+    return jsonResponse(
       { error: "Une erreur inattendue est survenue." },
-      { status: 500 }
+      500
     );
   }
 }

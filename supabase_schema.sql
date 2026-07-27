@@ -95,10 +95,24 @@ CREATE TABLE IF NOT EXISTS submissions (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Server-side rate limiting for the public submission endpoint.
+-- rate_limit_key is an HMAC of the client IP, never the raw address.
+CREATE TABLE IF NOT EXISTS submission_rate_limits (
+    rate_limit_key TEXT PRIMARY KEY,
+    window_start TIMESTAMPTZ NOT NULL,
+    request_count INTEGER NOT NULL DEFAULT 1 CHECK (request_count >= 1),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE submission_rate_limits ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE submission_rate_limits FROM PUBLIC, anon, authenticated;
+
 -- Indexes for Application performance
 CREATE INDEX IF NOT EXISTS properties_slug_idx ON properties(slug);
 CREATE INDEX IF NOT EXISTS submissions_property_id_idx ON submissions(property_id);
 CREATE INDEX IF NOT EXISTS forms_property_id_idx ON forms(property_id);
+CREATE INDEX IF NOT EXISTS submission_rate_limits_updated_at_idx
+    ON submission_rate_limits(updated_at);
 
 -- Grant full privileges to service_role for all tables
 -- (Resolves permission denied errors when using the service_role API key)
@@ -109,3 +123,4 @@ GRANT ALL PRIVILEGES ON TABLE public."user" TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public."session" TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public."account" TO service_role;
 GRANT ALL PRIVILEGES ON TABLE public."verification" TO service_role;
+GRANT ALL PRIVILEGES ON TABLE public.submission_rate_limits TO service_role;
