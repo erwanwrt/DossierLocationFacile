@@ -124,5 +124,6 @@ npm start
 
 ## 🔒 Sécurité et Confidentialité
 - **Accès restreint** : L'accès au tableau de bord des propriétaires est protégé par Better-Auth et nécessite d'être authentifié.
-- **Accès aux dossiers locataires** : Les pièces justificatives téléversées sur Google Drive sont configurées avec le rôle `reader` pour `anyone` (non répertoriées sur les moteurs de recherche Google), permettant au propriétaire de les consulter facilement depuis son tableau de bord sans configuration complexe de droits.
+- **Accès aux dossiers locataires** : Les pièces justificatives restent privées sur Google Drive. Leur téléchargement passe par une route serveur qui vérifie la session Better-Auth et confirme que le bien appartient au propriétaire connecté avant de transmettre le fichier, sans cache navigateur partagé.
+- **Dossier Drive parent** : Le dossier référencé par `GOOGLE_DRIVE_FOLDER_ID` doit rester privé et ne doit jamais être partagé avec `anyone`, faute de quoi ses fichiers enfants pourraient hériter de ce partage.
 - **Suppression propre des données** : Grâce à la suppression en cascade, aucune donnée orpheline n'est conservée sur Supabase ou sur Google Drive lors de la suppression d'un bien immobilier.

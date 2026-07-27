@@ -1,3 +1,5 @@
+import "server-only";
+
 import { google } from "googleapis";
 import { Readable } from "stream";
 
@@ -78,7 +80,7 @@ export async function uploadFileToGDrive(
   fileName: string,
   mimeType: string,
   parentFolderId: string
-): Promise<{ id: string; webViewLink: string }> {
+): Promise<{ id: string }> {
   const drive = getDriveClient();
 
   // Convert Buffer to Readable Stream
@@ -101,7 +103,7 @@ export async function uploadFileToGDrive(
     const fileResponse = await drive.files.create({
       requestBody: fileMetadata,
       media: media,
-      fields: "id, webViewLink",
+      fields: "id",
     });
 
     const fileId = fileResponse.data.id;
@@ -109,32 +111,45 @@ export async function uploadFileToGDrive(
       throw new Error("Failed to upload file: No ID returned");
     }
 
-    // 2. Share the file: make it readable by anyone with the link (unlisted)
-    // This allows the landlord to click and view files in the dashboard without permission issues,
-    // while keeping it unsearchable by Google.
-    await drive.permissions.create({
-      fileId: fileId,
-      requestBody: {
-        role: "reader",
-        type: "anyone",
-        allowFileDiscovery: false,
-      },
-    });
-
-    // 3. Fetch the updated webViewLink (sometimes permissions update the link or we need to ensure it's fetched)
-    const getFileResponse = await drive.files.get({
-      fileId: fileId,
-      fields: "webViewLink",
-    });
-
-    return {
-      id: fileId,
-      webViewLink: getFileResponse.data.webViewLink || fileResponse.data.webViewLink || "",
-    };
+    return { id: fileId };
   } catch (error) {
     console.error("Error uploading file to Google Drive:", error);
     throw error;
   }
+}
+
+/**
+ * Downloads a private Google Drive file through the authenticated application.
+ */
+export async function downloadGDriveFile(fileId: string): Promise<{
+  stream: Readable;
+  name: string;
+  mimeType: string;
+  size: string | null;
+}> {
+  const drive = getDriveClient();
+
+  const metadataResponse = await drive.files.get({
+    fileId,
+    fields: "name,mimeType,size",
+  });
+
+  const fileResponse = await drive.files.get(
+    {
+      fileId,
+      alt: "media",
+    },
+    {
+      responseType: "stream",
+    }
+  );
+
+  return {
+    stream: fileResponse.data as Readable,
+    name: metadataResponse.data.name || "document",
+    mimeType: metadataResponse.data.mimeType || "application/octet-stream",
+    size: metadataResponse.data.size || null,
+  };
 }
 
 /**
@@ -144,9 +159,11 @@ export async function deleteGDriveFile(fileId: string): Promise<void> {
   const drive = getDriveClient();
   try {
     await drive.files.delete({ fileId });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const apiError = error as { code?: number; status?: number };
+
     // If the file/folder is already deleted or not found, we don't need to throw an error
-    if (error.code === 404 || error.status === 404) {
+    if (apiError.code === 404 || apiError.status === 404) {
       console.warn(`File/folder with ID ${fileId} not found on Google Drive (already deleted).`);
       return;
     }
@@ -154,4 +171,3 @@ export async function deleteGDriveFile(fileId: string): Promise<void> {
     throw error;
   }
 }
-

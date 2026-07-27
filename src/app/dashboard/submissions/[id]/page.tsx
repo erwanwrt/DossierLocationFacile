@@ -310,12 +310,12 @@ export default async function SubmissionsPage({ params }: SubmissionsPageProps) 
                       </h3>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                        {Object.entries(submission.files || {}).map(([key, link]: [string, any]) => {
+                        {Object.keys(submission.files || {}).map((key) => {
                           const docName = DOC_NAMES[key] || key;
                           return (
                             <a
                               key={key}
-                              href={link}
+                              href={`/api/submissions/${encodeURIComponent(submission.id)}/files/${encodeURIComponent(key)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className={styles.btnSecondary}

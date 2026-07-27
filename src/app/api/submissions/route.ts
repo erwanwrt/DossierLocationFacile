@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Upload files to Google Drive
-    const filesLinks: Record<string, string> = {};
+    const fileIds: Record<string, string> = {};
 
     for (const key of FILE_KEYS) {
       const file = formData.get(key) as File | null;
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
             tenantFolderId
           );
 
-          filesLinks[key] = uploadRes.webViewLink;
+          fileIds[key] = uploadRes.id;
         } catch (uploadErr) {
           console.error(`Error uploading file ${key}:`, uploadErr);
           return NextResponse.json(
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
         guarantor_type: guarantorType,
         guarantor_income: guarantorIncome,
         gdrive_folder_id: tenantFolderId,
-        files: filesLinks,
+        files: fileIds,
         status: "pending",
         tenant_comment: tenantComment,
       })
