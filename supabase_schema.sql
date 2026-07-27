@@ -1,6 +1,53 @@
 -- SQL Schema for Dossier Location Facile database tables
 -- You can copy and paste this script directly into the Supabase SQL Editor.
 
+-- Automatically enable RLS on every table created in the public schema.
+-- This event-trigger function requires elevated rights, but it must never be
+-- callable through the API roles.
+CREATE OR REPLACE FUNCTION public.rls_auto_enable()
+RETURNS EVENT_TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    cmd RECORD;
+BEGIN
+    FOR cmd IN
+        SELECT *
+        FROM pg_event_trigger_ddl_commands()
+        WHERE command_tag IN ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')
+          AND object_type IN ('table', 'partitioned table')
+    LOOP
+        IF cmd.schema_name = 'public' THEN
+            BEGIN
+                EXECUTE format(
+                    'ALTER TABLE IF EXISTS %s ENABLE ROW LEVEL SECURITY',
+                    cmd.object_identity
+                );
+                RAISE LOG 'rls_auto_enable: enabled RLS on %',
+                    cmd.object_identity;
+            EXCEPTION
+                WHEN OTHERS THEN
+                    RAISE LOG 'rls_auto_enable: failed to enable RLS on %',
+                        cmd.object_identity;
+            END;
+        END IF;
+    END LOOP;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM service_role;
+
+DROP EVENT TRIGGER IF EXISTS ensure_rls;
+CREATE EVENT TRIGGER ensure_rls
+ON ddl_command_end
+WHEN TAG IN ('CREATE TABLE', 'CREATE TABLE AS', 'SELECT INTO')
+EXECUTE FUNCTION public.rls_auto_enable();
+
 -- 1. Better-Auth Tables (using standard PostgreSQL schema)
 
 CREATE TABLE IF NOT EXISTS "user" (
