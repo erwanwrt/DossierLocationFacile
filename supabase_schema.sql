@@ -95,6 +95,40 @@ CREATE TABLE IF NOT EXISTS submissions (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+-- Refuse submissions when the public application form is missing or closed.
+-- FOR SHARE serializes the check with concurrent form updates so a closure
+-- cannot race with an insertion.
+CREATE OR REPLACE FUNCTION public.enforce_active_submission_form()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+    PERFORM 1
+    FROM public.forms
+    WHERE property_id = NEW.property_id
+      AND is_active IS TRUE
+    FOR SHARE;
+
+    IF NOT FOUND THEN
+        RAISE EXCEPTION USING
+            ERRCODE = 'P0001',
+            MESSAGE = 'submission_form_inactive';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.enforce_active_submission_form() FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS enforce_active_submission_form_before_insert
+    ON public.submissions;
+CREATE TRIGGER enforce_active_submission_form_before_insert
+BEFORE INSERT ON public.submissions
+FOR EACH ROW
+EXECUTE FUNCTION public.enforce_active_submission_form();
+
 -- Server-side rate limiting for the public submission endpoint.
 -- rate_limit_key is an HMAC of the client IP, never the raw address.
 CREATE TABLE IF NOT EXISTS submission_rate_limits (

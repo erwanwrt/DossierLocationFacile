@@ -251,12 +251,22 @@ export async function POST(request: NextRequest) {
 
     const { data: property, error: propertyError } = await supabaseAdmin
       .from("properties")
-      .select("id, title, gdrive_folder_id, owner_id")
+      .select("id, title, gdrive_folder_id, owner_id, forms(is_active)")
       .eq("id", fields.propertyId)
       .single();
 
     if (propertyError || !property) {
       return jsonResponse({ error: "Propriété introuvable." }, 404);
+    }
+
+    const formConfig = Array.isArray(property.forms)
+      ? property.forms[0]
+      : property.forms;
+    if (formConfig?.is_active !== true) {
+      return jsonResponse(
+        { error: "Les candidatures sont fermées pour ce bien." },
+        403
+      );
     }
 
     let propertyFolderId = property.gdrive_folder_id;
@@ -318,6 +328,16 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
+
+    if (
+      insertError?.code === "P0001" &&
+      insertError.message.includes("submission_form_inactive")
+    ) {
+      return jsonResponse(
+        { error: "Les candidatures sont fermées pour ce bien." },
+        403
+      );
+    }
 
     if (insertError || !submission) {
       console.error("Failed to insert submission in DB:", insertError);
